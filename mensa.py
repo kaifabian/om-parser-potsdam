@@ -7,8 +7,17 @@ import time
 
 curr_url = "http://www.studentenwerk-potsdam.de/mensa-{mensa}.html"
 next_url = "http://www.studentenwerk-potsdam.de/speiseplan/"
-next_url = "http://www.studentenwerk-potsdam.de/speiseplan.html"
 meta_url = "http://www.studentenwerk-potsdam.de/mensa-{mensa}.html"
+
+meta_names = [
+	"am-neuen-palais",
+	"brandenburg",
+	"friedrich-ebert-strasse",
+	"golm",
+	"griebnitzsee",
+	"pappelallee",
+	"wildau",
+]
 
 def compFormat(instr, *args, **kwargs):
 	if hasattr(instr, "format"):

@@ -5,59 +5,10 @@ import libxml2,urllib2
 from lxml.html import soupparser
 import time
 
-curr_url = "http://www.studentenwerk-berlin.de/print/mensen/speiseplan/{mensa}/woche.html"
-next_url = "http://www.studentenwerk-berlin.de/print/mensen/speiseplan/{mensa}/naechste_woche.html"
-meta_url = "http://www.studentenwerk-berlin.de/mensen/mensen_cafeterien/{mensa}/index.html"
-
-meta_names = {
-	'fu1': 'fu1', #veggie no 1 van't hoff
-	'fu2': 'mensa_fu_2', #otto-von-simson
-	'fu_lankwitz': 'mensa_fu_lankwitz',
-	'fu_assmannshauser': 'mensa_fu_zahnklinik',
-	'fu_dueppel': 'mensa_fu_dueppel',
-	'fu_cafeteria': 'cafeteria_koserstrasse', #koserstraße
-	'fu_cafe_koenigin_luise': 'cafeteria_pharmazie_fu',
-	'fu_cafe_vant_hoff': 'cafeteria_rechtswissenschaften_fu',
-	'fu_cafe_ihne': 'cafeteria_am_osi',
-	'fu_cafe_gary': 'cafeteria_wirtschaftswissenschaften_fu',
-
-	'tu': 'mensa_tu_hardenbergstrasse', #hardenberg
-	'tu_cafeteria': 'tu_cafeteria', # franklin
-	'tu_ackerstr': 'cafeteria_tu_ackerstrasse', # cafe!
-	'tu_cafe_erp': 'cafeteria_ernst_reuter_platz', # ernst reuter
-	'tu_cafe_skyline': 'cafeteria_tu_skyline',
-	# fehlt speiseplan:
-	# - cafeteria_tu
-	# - cafeteria_tu_hauptgebaeude
-
-	'hu_nord': 'mensa_nord',
-	'hu_sued': 'mensa_sued',
-	'hu_adlershof': 'cafeteria_oase_adlershof', # oase
-	'hu_spandauer': 'mensa_hu_spandauer_strasse',
-
-	'udk_jazzcafe': 'jazz_cafe', # cafeteria udk
-
-	'htw_treskow': 'mensa_fhtw_treskowallee',
-	'htw_wilhelminenhof': 'mensa_htw_wilhelminenhof',
-
-	'hwr': 'mensa_fhw',
-
-	'beuth': 'mensa_tfh', # luxemburger
-	'beuth_kurfuersten': 'mensa_tfh_kurfuerstenstrasse',
-
-	'hfm': 'mensa_hfm', # charlottenstr
-	'hfm_cafeteria': 'cafeteria_hfm_schlossplatz', # cafe!
-
-	'ashb': 'mensa_asfh', #hellersdorf
-
-	'hfs': 'mensa_hfs', #schneller
-
-	'khs': 'mensa_khs', #weißensee
-
-	'khsb': 'mensa_kfh', # karlshorst
-
-	'ehb': 'mensa_ehb', # teltower damm
-}
+curr_url = "http://www.studentenwerk-potsdam.de/mensa-{mensa}.html"
+next_url = "http://www.studentenwerk-potsdam.de/speiseplan/"
+next_url = "http://www.studentenwerk-potsdam.de/speiseplan.html"
+meta_url = "http://www.studentenwerk-potsdam.de/mensa-{mensa}.html"
 
 def compFormat(instr, *args, **kwargs):
 	if hasattr(instr, "format"):
@@ -95,97 +46,105 @@ class ScraperStructureChangedError(ScraperError):
 
 def getContents(url):
 	handle = urllib2.urlopen(url)
-	content = handle.read().decode('utf-8')
+	content = handle.read().decode('iso-8859-1')
 	handle.close()
 	
 	return BeautifulSoup(content)
+	
+months = {
+	'Januar': 1,
+	'Februar': 2,
+	'Marz': 3,
+	'Maerz': 3,
+	u'M\xe4rz': 3,
+	u'M\xc3\xa4rz': 3,
+	'April': 4,
+	'Mai': 5,
+	'Juni': 6,
+	'Juli': 7,
+	'August': 8,
+	'September': 9,
+	'Oktober': 10,
+	'November': 11,
+	'Dezember': 12,
+}
 
-def scrape(url):
-	content = str(getContents(url))
-	xml = soupparser.fromstring(content)
+def scrape_table(table, force_date = None):
+	output = u""
 	
-	tables = xml.xpath("//table[contains(@class, 'mensa_week_table')]")
-	
-	if len(tables) != 1:
-		raise ScraperStructureChangedError(compFormat("Asserting 1 table, got {}", len(tables)))
-	
-	table = tables[0]
-	
-	dates = table.xpath("//thead/tr/th[contains(@class, 'mensa_week_head_col')]")
-	if not len(dates) == 5:
-		raise ScraperStructureChangedError(compFormat("Asserting 5 dates, got {}", len(dates)))
-	
-	_dates = dict()
-	dateRe = re.compile("(?P<weekName>[A-Za-z]+,?) (?P<day>[0-9]+)\.(?P<month>[0-9]+)\.(?P<year>[0-9]+)")
-	
-	for date in dates:
+	if not force_date:
+		dateRe = re.compile("(?P<weekName>[A-Za-z]+,?) (?P<day>[0-9]+)\. (?P<month>\w+) (?P<year>[0-9]+)")
+		
+		dates = table.xpath(".//div[contains(@class, 'date')]")
+		date = dates[0]
+		
 		dateText = dateRe.match(date.text)
 		if not dateText:
 			raise ScraperStructureChangedError(compFormat("Could not parse date {}", repr(date.text)))
 		
-		day,month,year = map(lambda w: int(dateText.group(w)), ["day", "month", "year", ])
-		year += 2000
+		day,year = map(lambda w: int(dateText.group(w)), ["day", "year", ])
+		month = months[dateText.group("month")]
 		dateText = compFormat("{year:04}-{month:02}-{day:02}", day = day, month = month, year = year)
+	else:
+		dateText = force_date
 		
-		parent = date.getparent()
-		dateIndex = None
-		for index,candidate in enumerate(parent.iterchildren()):
-			if candidate == date:
-				dateIndex = index
-		
-		if not dateIndex:
-			raise ScraperStructureChangedError(compFormat("Could not find index for {}", dateText))
-		
-		_dates[dateText] = (dateIndex, date)
+	categories = table.xpath(".//td[contains(@class, 'head')]")
+	meals = table.xpath(".//td[starts-with(@class, 'text')]")
+	labels = table.xpath(".//td[starts-with(@class, 'label')]")
 	
-	categories = map(lambda node: node.text, table.xpath("//tr/th[@class='mensa_week_speise_tag_title']"))
-	_categories = dict()
+	assert len(meals) == len(labels), ":)"
 	
-	output = ""
+	output += compFormat(u" <day date=\"{}\">\n", dateText)
+	for index,meal in enumerate(meals):
+		label = labels[index]
+		category = categories[index % len(categories)]
+		
+		labelList = label.xpath(".//a/img/@title")
+		labelList = map(lambda s: s, labelList)
+		
+		mealName = meal.text
+		categoryName = category.text.decode("iso-8859-1").encode("utf-8")
+		
+		output += compFormat(u"  <category name=\"{}\">\n", category.text)
+		output += u"   <meal>\n"
+		output += compFormat(u"    <name>{name}</name>\n", name = meal.text)
+		for labelText in labelList:
+			output += compFormat(u"    <note>{note}</note>\n", note = labelText)
+		output += u"   </meal>\n"
+	output += u" </day>\n"
 	
-	priceRe = re.compile("([0-9]+\.[0-9]+)")
+	return output
+
+def scrape_daily(url):
+	content = str(getContents(url))
+	xml = soupparser.fromstring(content)
 	
-	for date in sorted(_dates):
-		dateIndex, dateNode = _dates[date]
-		
-		output += compFormat(" <day date=\"{}\">\n", date)
-		
-		for categoryIndex,category in enumerate(categories):
-			trIndex = categoryIndex + 1
-			tdIndex = dateIndex
-			meals = table.xpath(compFormat("//tr[{tri}]/td[{tdi}]/p[contains(@class, 'mensa_speise')]", tri = trIndex, tdi = tdIndex))
-			
-			output += compFormat("  <category name=\"{}\">\n", category)
-			
-			for meal in meals:
-				name = meal.xpath(".//strong")
-				###zusatz = meal.xpath(".//a[@class='zusatz']")
-				prices = meal.xpath(".//span[@class='mensa_preise']")
-				
-				if len(name) != 1:
-					raise ScraperStructureChangedError("Could not find name for meal")
-				###if len(zusatz) < 1:
-				###	raise ScraperStructureChangedError("Could not find zusatz for meal")
-				if len(prices) != 1:
-					raise ScraperStructureChangedError("Could not find prices for meal")
-				
-				_name = name[0]
-				name = name[0].text
-				if name is None:
-					name = ""
-				prices = prices[0].text
-				
-				output += "   <meal>\n"
-				output += compFormat("    <name>{name}</name>\n", name = name.encode("utf-8"))
-				output += "    <note />\n"
-				
-				for price in priceRe.findall(prices):
-					output += compFormat("    <price>{}</price>\n", price)
-				
-				output += "   </meal>\n"
-			output += "  </category>\n"
-		
-		output += " </day>\n"
+	tables = xml.xpath("//table[contains(@class, 'bill_of_fare')]")
+	if len(tables) > 0:
+		table = tables[0]
+	else:
+		return u"<!-- fetch again in 30 minutes -->\n"
+	
+	dateRe = re.compile("(.*) (?P<weekName>[A-Za-z]+), den (?P<day>[0-9]+)\. (?P<month>\w+) (?P<year>[0-9]+)")
+	date = xml.xpath("//h2[@id = 'ueberschrift_h2']/text()[starts-with(.,'Speiseplan')]")[0]
+	dateMatch = dateRe.match(date)
+	day,year = map(lambda w: int(dateMatch.group(w)), ["day", "year", ])
+	month = months[dateMatch.group("month")]
+	dateText = compFormat("{year:04}-{month:02}-{day:02}", day = day, month = month, year = year)
+	
+	output = scrape_table(table, force_date = dateText)
+	
+	return output
+
+def scrape_week(url):
+	content = str(getContents(url))
+	xml = soupparser.fromstring(content)
+	
+	tables = xml.xpath("//table[contains(@class, 'bill_of_fare')]")
+	
+	output = u""
+	for table in tables:
+		output += scrape_table(table)
 	
 	return output
 
@@ -196,9 +155,11 @@ def scrape_meta(name, urls):
 	content = str(getContents(url))
 	xml = soupparser.fromstring(content)
 	
-	mensaname = xml.xpath('//div[contains(@class, "einrichtung")]/h1/text()')
-	adresse = xml.xpath('//p[contains(@class, "adresse")]/text()')
-	telefon = xml.xpath('//p[contains(@class, "telefon")]/text()')
+	telfield = 'Tel.: '
+	
+	mensaname = xml.xpath('//div[contains(@class, "site_title")]/h1/text()')
+	adresse = xml.xpath('//span[contains(@id, "container2")]/text()')
+	telefon = xml.xpath('//p[contains(@class, "bodytext")]/text()[starts-with(.,"' + telfield + '")]')
 	if len(mensaname) < 1:
 		raise ScraperStructureChangedError("Name not found in meta")
 	if len(adresse) < 2:
@@ -207,12 +168,18 @@ def scrape_meta(name, urls):
 		raise ScraperStructureChangedError("Telephone not found in meta")
 	
 	mensaname = mensaname[0].strip().encode("utf-8")
-	strasse = adresse[0].strip().encode("utf-8")
-	plzort = adresse[1].strip()
+	
+	if len(adresse) == 11:
+		strasse = adresse[6].strip().encode("utf-8") + ", " + adresse[7].strip().encode("utf-8")
+		plzort = adresse[8].strip()
+	else:
+		strasse = adresse[6].strip().encode("utf-8")
+		plzort = adresse[7].strip()
+	
 	plz,ort = plzort.split(" ", 1)
 	plz = int(plz)
 	ort = ort.encode("utf-8")
-	telefon = telefon[0].strip().encode("utf-8")
+	telefon = telefon[0].strip().encode("utf-8")[len(telfield):]
 	
 	output = " <!--\n"
 	output += "  <om-proposed-v2:provider-info xmlns:om-proposed-v2=\"http://mirror.space-port.eu/~om/om-proposed-v2\">\n"
@@ -233,7 +200,7 @@ def scrape_meta(name, urls):
 	
 	return output
 
-def scrape_mensa(name, cacheTimeout = 15*60):
+def scrape_mensa(name, cacheTimeout = 1):
 	cacheName = name.replace("/", "_").replace("\\", "_")
 	cacheDir = os.path.join(os.path.dirname(__file__), "cache")
 	cacheFile = compFormat("{name}.xml", name=cacheName)	
@@ -260,23 +227,15 @@ def scrape_mensa(name, cacheTimeout = 15*60):
 	url2 = compFormat(next_url, mensa=name)
 	
 	urls = [url1, url2, ]
-	try:
-		if not meta_names[name]:
-			meta_name = name
-		else:
-			meta_name = meta_names[name]
-		output += scrape_meta(meta_name, urls)
-	except Exception, e:
-		pass
-
-	try:
-		output += scrape(url1)
-		output += scrape(url2)
-		pass
-	except Exception, e:
-		raise e
-		pass
+	
+	output += scrape_meta(name, urls)
+	output += scrape_daily(url1)
+	output += scrape_week(url2)
+	
 	output += "</cafeteria>\n"
+	output = output.encode("utf-8")
+	
+	print output
 
 	if cacheTimeout > 0:
 		handle = open(cachePath, "wb")
@@ -286,7 +245,7 @@ def scrape_mensa(name, cacheTimeout = 15*60):
 	return output
 
 if __name__ == "__main__" and "test" in sys.argv:
-	mensa_name = "fu_lankwitz"
+	mensa_name = "am-neuen-palais"
 	mensa = scrape_mensa(mensa_name)
 	
 	f = open(compFormat("test-{}.xml", mensa_name), "wb")

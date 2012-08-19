@@ -245,8 +245,6 @@ def scrape_mensa(name, cacheTimeout = 1):
 	
 	output += "</cafeteria>\n"
 	output = output.encode("utf-8")
-	
-	print output
 
 	if cacheTimeout > 0:
 		handle = open(cachePath, "wb")

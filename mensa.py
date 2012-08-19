@@ -35,7 +35,9 @@ def compFormat(instr, *args, **kwargs):
 		instr = instr.replace("{" + str(i) + "}", str(args[i]))
 	
 	for name in kwargs:
-		value = str(kwargs[name])
+		value = kwargs[name]
+		if value.__class__ != instr.__class__:
+			value = instr.__class__(value)
 		instr = instr.replace("{" + name + "}", value)
 		x = re.compile("{" + re.escape(name) + ":(?P<pad>.)(?P<length>[0-9]+)}")
 		y = set(x.findall(instr))

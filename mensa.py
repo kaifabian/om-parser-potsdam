@@ -19,6 +19,16 @@ meta_names = [
 	"wildau",
 ]
 
+addresses = {
+	"am-neuen-palais": (u"Am Neuen Palais 10, Haus 12", 14469, u"Potsdam"),
+	"brandenburg": (u"Magdeburger Straße 50", 14770, u"Brandenburg an der Havel"),
+	"friedrich-ebert-strasse": (u"Friedrich-Ebert-Str. 4", 14467, u"Potsdam"),
+	"golm": (u"Karl-Liebknecht-Str. 24/25", 14476, u"Potsdam OT Golm"),
+	"griebnitzsee": (u"August-Bebel-Str. 89", 14482, u"Potsdam"),
+	"pappelallee": (u"Kiepenheuerallee 5", 14469, u"Potsdam"),
+	"wildau": (u"Bahnhofstr. 1", 15745, u"Wildau"),
+}
+
 def compFormat(instr, *args, **kwargs):
 	if hasattr(instr, "format"):
 		return instr.format(*args, **kwargs)
@@ -170,26 +180,17 @@ def scrape_meta(name, urls):
 	telfield = 'Tel.: '
 	
 	mensaname = xml.xpath('//div[contains(@class, "site_title")]/h1/text()')
-	adresse = xml.xpath('//span[contains(@id, "container2")]/text()')
+	#adresse = xml.xpath('//span[contains(@id, "container2")]/text()')
 	telefon = xml.xpath('//p[contains(@class, "bodytext")]/text()[starts-with(.,"' + telfield + '")]')
 	if len(mensaname) < 1:
 		raise ScraperStructureChangedError("Name not found in meta")
-	if len(adresse) < 2:
-		raise ScraperStructureChangedError("Address not found in meta")
 	if len(telefon) < 1:
 		raise ScraperStructureChangedError("Telephone not found in meta")
 	
 	mensaname = mensaname[0].strip().encode("utf-8")
 	
-	if len(adresse) == 11:
-		strasse = adresse[6].strip().encode("utf-8") + ", " + adresse[7].strip().encode("utf-8")
-		plzort = adresse[8].strip()
-	else:
-		strasse = adresse[6].strip().encode("utf-8")
-		plzort = adresse[7].strip()
-	
-	plz,ort = plzort.split(" ", 1)
-	plz = int(plz)
+	strasse,plz,ort = addresses[name]
+	print strasse,plz,ort
 	ort = ort.encode("utf-8")
 	telefon = telefon[0].strip().encode("utf-8")[len(telfield):]
 	
@@ -256,8 +257,10 @@ def scrape_mensa(name, cacheTimeout = 1):
 
 if __name__ == "__main__" and "test" in sys.argv:
 	mensa_name = "am-neuen-palais"
-	mensa = scrape_mensa(mensa_name)
-	
-	f = open(compFormat("test-{}.xml", mensa_name), "wb")
-	f.write(mensa)
-	f.close()
+	for mensa_name in meta_names:
+		print "---", "Testing", mensa_name, "---"
+		mensa = scrape_mensa(mensa_name)
+		
+		f = open(compFormat("test-{}.xml", mensa_name), "wb")
+		f.write(mensa)
+		f.close()

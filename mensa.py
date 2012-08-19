@@ -190,7 +190,6 @@ def scrape_meta(name, urls):
 	mensaname = mensaname[0].strip().encode("utf-8")
 	
 	strasse,plz,ort = addresses[name]
-	print strasse,plz,ort
 	ort = ort.encode("utf-8")
 	telefon = telefon[0].strip().encode("utf-8")[len(telfield):]
 	

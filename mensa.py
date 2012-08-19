@@ -122,6 +122,7 @@ def scrape_table(table, force_date = None):
 		for labelText in labelList:
 			output += compFormat(u"    <note>{note}</note>\n", note = labelText)
 		output += u"   </meal>\n"
+		output += u"  </category>\n"
 	output += u" </day>\n"
 	
 	return output

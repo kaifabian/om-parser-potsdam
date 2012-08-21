@@ -123,12 +123,13 @@ def scrape_table(table, force_date = None):
 		labelList = label.xpath(".//a/img/@title")
 		labelList = map(lambda s: s, labelList)
 		
-		mealName = meal.text
+		mealName = meal.text_content()
+		
 		categoryName = category.text.decode("iso-8859-1").encode("utf-8")
 		
 		output += compFormat(u"  <category name=\"{}\">\n", category.text)
 		output += u"   <meal>\n"
-		output += compFormat(u"    <name>{name}</name>\n", name = meal.text)
+		output += compFormat(u"    <name>{name}</name>\n", name = mealName)
 		for labelText in labelList:
 			output += compFormat(u"    <note>{note}</note>\n", note = labelText)
 		output += u"   </meal>\n"

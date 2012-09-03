@@ -94,7 +94,7 @@ def scrape_table(table, force_date = None):
 	output = u""
 	
 	if not force_date:
-		dateRe = re.compile("(?P<weekName>[A-Za-z]+,?) (?P<day>[0-9]+)\. (?P<month>\w+) (?P<year>[0-9]+)")
+		dateRe = re.compile("(?P<weekName>[A-Za-z]+,?) +(?P<day>[0-9]+)\. (?P<month>\w+) (?P<year>[0-9]+)")
 		
 		dates = table.xpath(".//div[contains(@class, 'date')]")
 		date = dates[0]

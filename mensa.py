@@ -105,6 +105,7 @@ def scrape_table(table, force_date = None):
 		
 		day,year = map(lambda w: int(dateText.group(w)), ["day", "year", ])
 		month = months[dateText.group("month")]
+		year = year + 2000 if year < 1900 else year
 		dateText = compFormat("{year:04}-{month:02}-{day:02}", day = day, month = month, year = year)
 	else:
 		dateText = force_date

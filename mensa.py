@@ -262,7 +262,7 @@ if __name__ == "__main__" and "test" in sys.argv:
 	mensa_name = "am-neuen-palais"
 	for mensa_name in meta_names:
 		print "---", "Testing", mensa_name, "---"
-		mensa = scrape_mensa(mensa_name)
+		mensa = scrape_mensa(mensa_name, cacheTimeout = -1)
 		
 		f = open(compFormat("test-{}.xml", mensa_name), "wb")
 		f.write(mensa)

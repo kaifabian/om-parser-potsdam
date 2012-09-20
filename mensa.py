@@ -234,10 +234,11 @@ def scrape_mensa(name, cacheTimeout = 1):
 
     output = \
 """<?xml version="1.0" encoding="UTF-8"?>
-<cafeteria version="1.0"
-            xmlns="http://openmensa.org/open-mensa-v1"
+<openmensa version="2.0"
+            xmlns="http://openmensa.org/open-mensa-v2"
             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-            xsi:schemaLocation="http://openmensa.org/open-mensa-v1 http://openmensa.org/open-mensa-v1.xsd">
+            xsi:schemaLocation="http://openmensa.org/open-mensa-v2 http://openmensa.org/open-mensa-v2.xsd">
+ <canteen>
 """
 
     url1 = compFormat(curr_url, mensa=name)
@@ -249,7 +250,8 @@ def scrape_mensa(name, cacheTimeout = 1):
     output += scrape_daily(url1)
     output += scrape_week(url2)
     
-    output += "</cafeteria>\n"
+    output += " </canteen>\n"
+    output += "</openmensa>\n"
     output = output.encode("utf-8")
 
     if cacheTimeout > 0:

@@ -3,6 +3,7 @@ import sys,os
 from BeautifulSoup import *
 import libxml2,urllib2
 from lxml.html import soupparser
+from xml.sax.saxutils import escape, quoteattr
 import time
 
 curr_url = "http://www.studentenwerk-potsdam.de/mensa-{mensa}.html"
@@ -116,7 +117,7 @@ def scrape_table(table, force_date = None):
 	
 	assert len(meals) == len(labels), ":)"
 	
-	output += compFormat(u" <day date=\"{}\">\n", dateText)
+	output += compFormat(u" <day date={}>\n", quoteattr(dateText))
 	for index,meal in enumerate(meals):
 		label = labels[index]
 		category = categories[index % len(categories)]
@@ -128,11 +129,11 @@ def scrape_table(table, force_date = None):
 		
 		categoryName = category.text.decode("iso-8859-1").encode("utf-8")
 		
-		output += compFormat(u"  <category name=\"{}\">\n", category.text)
+		output += compFormat(u"  <category name={}>\n", quoteattr(category.text))
 		output += u"   <meal>\n"
-		output += compFormat(u"    <name>{name}</name>\n", name = mealName)
+		output += compFormat(u"    <name>{name}</name>\n", name = escape(mealName))
 		for labelText in labelList:
-			output += compFormat(u"    <note>{note}</note>\n", note = labelText)
+			output += compFormat(u"    <note>{note}</note>\n", note = escape(labelText))
 		output += u"   </meal>\n"
 		output += u"  </category>\n"
 	output += u" </day>\n"

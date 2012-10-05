@@ -150,7 +150,7 @@ def scrape_daily(url):
     else:
         return u"<!-- fetch again in 30 minutes -->\n"
     
-    dateRe = re.compile("(.*) (?P<weekName>[A-Za-z]+), den (?P<day>[0-9]+)\. (?P<month>\w+) (?P<year>[0-9]+)")
+    dateRe = re.compile("(.*)\s+(?P<weekName>[A-Za-z]+),\s*den\s*(?P<day>[0-9]+)\.\s*(?P<month>\w+)\s*(?P<year>[0-9]+)")
     date = xml.xpath("//h2[@id = 'ueberschrift_h2']/text()[starts-with(.,'Speiseplan')]")[0]
     dateMatch = dateRe.match(date)
     day,year = map(lambda w: int(dateMatch.group(w)), ["day", "year", ])

@@ -11,6 +11,7 @@ import time
 curr_url = "http://www.studentenwerk-potsdam.de/mensa-{mensa}.html"
 next_url = "http://www.studentenwerk-potsdam.de/speiseplan/"
 meta_url = "http://www.studentenwerk-potsdam.de/mensa-{mensa}.html"
+xsd_location = "http://openmensa.org/open-mensa-v2.xsd"
 
 meta_names = [
     "am-neuen-palais",
@@ -131,13 +132,14 @@ def scrape_table(table, force_date = None):
         
         categoryName = category.text.decode("iso-8859-1").encode("utf-8")
         
-        output += compFormat(u"  <category name={}>\n", quoteattr(category.text))
-        output += u"   <meal>\n"
-        output += compFormat(u"    <name>{name}</name>\n", name = escape(mealName))
-        for labelText in labelList:
-            output += compFormat(u"    <note>{note}</note>\n", note = escape(labelText))
-        output += u"   </meal>\n"
-        output += u"  </category>\n"
+        if len(mealName) > 0:
+            output += compFormat(u"  <category name={}>\n", quoteattr(category.text))
+            output += u"   <meal>\n"
+            output += compFormat(u"    <name>{name}</name>\n", name = escape(mealName))
+            for labelText in labelList:
+                output += compFormat(u"    <note>{note}</note>\n", note = escape(labelText))
+            output += u"   </meal>\n"
+            output += u"  </category>\n"
     output += u" </day>\n"
     
     return output
@@ -256,12 +258,71 @@ def scrape_mensa(name, cacheTimeout = 1):
 
     return output
 
+def canValidate():
+    try:
+        from lxml import etree
+        from cStringIO import StringIO
+    except ImportError, e:
+        __import__("traceback").print_exc(e)
+        return False
+
+    return True
+
+
+def validate(xmldata, schema):
+    try:
+        from lxml import etree
+        from cStringIO import StringIO
+    except ImportError:
+        return False
+
+    scs = etree.parse(StringIO(schema))
+    sch = etree.XMLSchema(scs)
+    xml = etree.parse(StringIO(xmldata))
+
+    try:
+        sch.assertValid(xml)
+        return True
+    except etree.DocumentInvalid:
+        print sch.error_log
+        return False
+
+#if __name__ == "__main__" and "test" in sys.argv:
+#    for mensa_name in meta_names:
+#        print "---", "Testing", mensa_name, "---"
+#        mensa = scrape_mensa(mensa_name, cacheTimeout = -1)
+#        
+#        f = open(compFormat("test-{}.xml", mensa_name), "wb")
+#        f.write(mensa)
+#        f.close()
+
 if __name__ == "__main__" and "test" in sys.argv:
-    mensa_name = "am-neuen-palais"
+    doValidation = False
+    if canValidate():
+        doValidation = True
+
+        try:
+            import urllib2
+            xsdh = urllib2.urlopen(xsd_location)
+            xsd = xsdh.read()
+            xsdh.close()
+        except Exception,e:
+            __import__("traceback").print_exc(e)
+            print "ERROR"
+            doValidation = False
+
+    if not doValidation:
+        print "[ERR ] cannot validate!"
+
     for mensa_name in meta_names:
         print "---", "Testing", mensa_name, "---"
         mensa = scrape_mensa(mensa_name, cacheTimeout = -1)
-        
+
+        if doValidation:
+            if not validate(mensa, xsd):
+                raise Exception("Validation Exception")
+
         f = open(compFormat("test-{}.xml", mensa_name), "wb")
         f.write(mensa)
         f.close()
+

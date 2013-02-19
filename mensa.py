@@ -1,4 +1,6 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 import sys,os
 from BeautifulSoup import *
 import libxml2,urllib2

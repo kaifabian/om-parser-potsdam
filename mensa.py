@@ -129,7 +129,8 @@ def scrape_table(table, force_date = None):
         labelList = map(lambda s: s, labelList)
         
         mealName = meal.text_content()
-        categoryName = category.text
+        
+        categoryName = category.text.decode("iso-8859-1").encode("utf-8")
         
         if len(mealName) > 0:
             output += compFormat(u"  <category name={}>\n", quoteattr(category.text))
@@ -145,7 +146,7 @@ def scrape_table(table, force_date = None):
 
 def scrape_daily(url):
     content = str(getContents(url))
-    xml = soupparser.fromstring(content, fromEncoding="iso-8859-1")
+    xml = soupparser.fromstring(content)
     
     tables = xml.xpath("//table[contains(@class, 'bill_of_fare')]")
     if len(tables) > 0:

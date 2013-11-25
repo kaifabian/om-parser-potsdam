@@ -130,7 +130,11 @@ def scrape_table(table, force_date = None):
         
         mealName = meal.text_content()
         
-        categoryName = category.text.decode("iso-8859-1").encode("utf-8")
+        try:
+            categoryName = category.text.decode("iso-8859-1").encode("utf-8")
+        except UnicodeEncodeError:
+            categoryName = category.text.encode("utf-8")
+            pass
         
         if len(mealName) > 0:
             output += compFormat(u"  <category name={}>\n", quoteattr(category.text))

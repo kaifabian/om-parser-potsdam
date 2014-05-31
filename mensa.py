@@ -19,7 +19,7 @@ meta_names = [
     "friedrich-ebert-strasse",
     "golm",
     "griebnitzsee",
-    "pappelallee",
+    "kiepenheuerallee",
     "wildau",
 ]
 
@@ -29,7 +29,7 @@ addresses = {
     "friedrich-ebert-strasse": (u"Friedrich-Ebert-Str. 4", 14467, u"Potsdam"),
     "golm": (u"Karl-Liebknecht-Str. 24/25", 14476, u"Potsdam OT Golm"),
     "griebnitzsee": (u"August-Bebel-Str. 89", 14482, u"Potsdam"),
-    "pappelallee": (u"Kiepenheuerallee 5", 14469, u"Potsdam"),
+    "kiepenheuerallee": (u"Kiepenheuerallee 5", 14469, u"Potsdam"),
     "wildau": (u"Bahnhofstr. 1", 15745, u"Wildau"),
 }
 

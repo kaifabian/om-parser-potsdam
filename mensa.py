@@ -1,12 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys,os
+import sys
+import os
+
+import time
+import libxml2
+import urllib2
+from io import BytesIO
+
 from BeautifulSoup import *
-import libxml2,urllib2
 from lxml.html import soupparser
 from xml.sax.saxutils import escape, quoteattr
-import time
+
+import pyopenmensa.feed
 
 curr_url = "http://www.studentenwerk-potsdam.de/mensa-{mensa}.html"
 next_url = "http://www.studentenwerk-potsdam.de/speiseplan/"

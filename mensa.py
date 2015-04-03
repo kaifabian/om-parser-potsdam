@@ -237,7 +237,7 @@ def scrape_mensa(name, cacheTimeout = 1):
     scrape_daily(url1, builder=builder)
     scrape_week(url2, builder=builder)
 
-    output = builder.toXMLFeed()
+    output = builder.toXMLFeed().encode("utf-8")
 
     if cacheTimeout > 0:
         handle = open(cachePath, "wb")
@@ -295,7 +295,6 @@ if __name__ == "__main__" and "test" in sys.argv:
     for mensa_name in meta_names:
         print "---", "Testing", mensa_name, "---"
         mensa = scrape_mensa(mensa_name, cacheTimeout = -1)
-        mensa = mensa.encode("utf-8")
 
         if doValidation:
             if not validate(mensa, xsd):

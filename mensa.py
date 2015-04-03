@@ -101,9 +101,7 @@ months = {
     'Dezember': 12,
 }
 
-def scrape_table(table, force_date = None):
-    output = u""
-    
+def scrape_table(table, builder=None, force_date=None):
     if not force_date:
         dateRe = re.compile("(?P<weekName>[A-Za-z]+,?) +(?P<day>[0-9]+)\. (?P<month>.+) (?P<year>[0-9]+)")
         
@@ -127,7 +125,6 @@ def scrape_table(table, force_date = None):
     
     assert len(meals) == len(labels), ":)"
     
-    output += compFormat(u" <day date={}>\n", quoteattr(dateText))
     for index,meal in enumerate(meals):
         label = labels[index]
         category = categories[index % len(categories)]
@@ -144,18 +141,10 @@ def scrape_table(table, force_date = None):
             pass
         
         if len(mealName) > 0:
-            output += compFormat(u"  <category name={}>\n", quoteattr(category.text))
-            output += u"   <meal>\n"
-            output += compFormat(u"    <name>{name}</name>\n", name = escape(mealName))
-            for labelText in labelList:
-                output += compFormat(u"    <note>{note}</note>\n", note = escape(labelText))
-            output += u"   </meal>\n"
-            output += u"  </category>\n"
-    output += u" </day>\n"
-    
-    return output
+            prices = None
+            builder.addMeal(dateText, category.text, mealName, notes=labelList, prices=prices)
 
-def scrape_daily(url):
+def scrape_daily(url, builder=None):
     content = str(getContents(url))
     xml = soupparser.fromstring(content)
     
@@ -163,32 +152,29 @@ def scrape_daily(url):
     if len(tables) > 0:
         table = tables[0]
     else:
-        return u"<!-- fetch again in 30 minutes -->\n"
+        return
     
     dateRe = re.compile("(.*)\s+(?P<weekName>[A-Za-z]+),\s*den\s*(?P<day>[0-9]+)\.\s*(?P<month>[^\s]+)\s*(?P<year>[0-9]+)")
     date = xml.xpath("//h2[@id = 'ueberschrift_h2']/text()[starts-with(.,'Speiseplan')]")[0]
     dateMatch = dateRe.match(date)
     day,year = map(lambda w: int(dateMatch.group(w)), ["day", "year", ])
     month = months[dateMatch.group("month")]
-    dateText = compFormat("{year:04}-{month:02}-{day:02}", day = day, month = month, year = year)
+    dateText = compFormat("{year:04}-{month:02}-{day:02}", day=day, month=month, year=year)
     
-    output = scrape_table(table, force_date = dateText)
-    
-    return output
+    return scrape_table(table, builder=builder, force_date=dateText)
 
-def scrape_week(url):
+def scrape_week(url, builder=None):
     content = str(getContents(url))
     xml = soupparser.fromstring(content)
     
     tables = xml.xpath("//table[contains(@class, 'bill_of_fare')]")
     
-    output = u""
     for table in tables:
-        output += scrape_table(table)
-    
-    return output
+        scrape_table(table, builder=builder)
 
-def scrape_meta(name, urls):
+def scrape_meta(name, urls, builder=None):
+    # not yet implemented due to lack of meta data support in pyopenmensa
+    raise NotImplementedError()
     url = compFormat(meta_url, mensa = name)
     urls.append(url)
     
@@ -240,27 +226,18 @@ def scrape_mensa(name, cacheTimeout = 1):
 
             return content
 
-    output = \
-"""<?xml version="1.0" encoding="UTF-8"?>
-<openmensa version="2.0"
-            xmlns="http://openmensa.org/open-mensa-v2"
-            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-            xsi:schemaLocation="http://openmensa.org/open-mensa-v2 http://openmensa.org/open-mensa-v2.xsd">
- <canteen>
-"""
-
     url1 = compFormat(curr_url, mensa=name)
     url2 = compFormat(next_url, mensa=name)
-    
+
     urls = [url1, url2, ]
-    
-    output += scrape_meta(name, urls)
-    output += scrape_daily(url1)
-    output += scrape_week(url2)
-    
-    output += " </canteen>\n"
-    output += "</openmensa>\n"
-    output = output.encode("utf-8")
+
+    builder = pyopenmensa.feed.LazyBuilder()
+
+    ## scrape_meta(name, urls)
+    scrape_daily(url1, builder=builder)
+    scrape_week(url2, builder=builder)
+
+    output = builder.toXMLFeed()
 
     if cacheTimeout > 0:
         handle = open(cachePath, "wb")
@@ -272,7 +249,6 @@ def scrape_mensa(name, cacheTimeout = 1):
 def canValidate():
     try:
         from lxml import etree
-        from cStringIO import StringIO
     except ImportError, e:
         __import__("traceback").print_exc(e)
         return False
@@ -283,13 +259,12 @@ def canValidate():
 def validate(xmldata, schema):
     try:
         from lxml import etree
-        from cStringIO import StringIO
     except ImportError:
         return False
 
-    scs = etree.parse(StringIO(schema))
+    scs = etree.parse(BytesIO(schema))
     sch = etree.XMLSchema(scs)
-    xml = etree.parse(StringIO(xmldata))
+    xml = etree.parse(BytesIO(xmldata))
 
     try:
         sch.assertValid(xml)
@@ -298,14 +273,6 @@ def validate(xmldata, schema):
         print sch.error_log
         return False
 
-#if __name__ == "__main__" and "test" in sys.argv:
-#    for mensa_name in meta_names:
-#        print "---", "Testing", mensa_name, "---"
-#        mensa = scrape_mensa(mensa_name, cacheTimeout = -1)
-#        
-#        f = open(compFormat("test-{}.xml", mensa_name), "wb")
-#        f.write(mensa)
-#        f.close()
 
 if __name__ == "__main__" and "test" in sys.argv:
     doValidation = False
@@ -328,6 +295,7 @@ if __name__ == "__main__" and "test" in sys.argv:
     for mensa_name in meta_names:
         print "---", "Testing", mensa_name, "---"
         mensa = scrape_mensa(mensa_name, cacheTimeout = -1)
+        mensa = mensa.encode("utf-8")
 
         if doValidation:
             if not validate(mensa, xsd):
@@ -336,4 +304,3 @@ if __name__ == "__main__" and "test" in sys.argv:
         f = open(compFormat("test-{}.xml", mensa_name), "wb")
         f.write(mensa)
         f.close()
-

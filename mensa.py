@@ -133,13 +133,16 @@ def scrape_table(table, builder=None, force_date=None):
         labelList = map(lambda s: s, labelList)
         
         mealName = meal.text_content()
-        
-        try:
-            categoryName = category.text.decode("iso-8859-1").encode("utf-8")
-        except UnicodeEncodeError:
-            categoryName = category.text.encode("utf-8")
-            pass
-        
+
+        if category.text:
+            try:
+                categoryName = category.text.decode("iso-8859-1").encode("utf-8")
+            except UnicodeEncodeError:
+                categoryName = category.text.encode("utf-8")
+                pass
+        else:
+            categoryName = u"sonstiges".encode("utf-8")
+
         if len(mealName) > 0:
             prices = None
             builder.addMeal(dateText, category.text, mealName, notes=labelList, prices=prices)

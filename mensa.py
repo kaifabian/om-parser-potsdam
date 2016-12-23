@@ -4,6 +4,7 @@
 import sys
 import os
 
+import datetime
 import time
 import libxml2
 import urllib2
@@ -152,10 +153,9 @@ def scrape_daily(url, builder=None):
     xml = soupparser.fromstring(content)
     
     tables = xml.xpath("//table[contains(@class, 'bill_of_fare')]")
+    table = None
     if len(tables) > 0:
         table = tables[0]
-    else:
-        return
     
     dateRe = re.compile("(.*)\s+(?P<weekName>[A-Za-z]+),\s*den\s*(?P<day>[0-9]+)\.\s*(?P<month>[^\s]+)\s*(?P<year>[0-9]+)")
     date = xml.xpath("//h2[@id = 'ueberschrift_h2']/text()[starts-with(.,'Speiseplan')]")[0]
@@ -163,8 +163,18 @@ def scrape_daily(url, builder=None):
     day,year = map(lambda w: int(dateMatch.group(w)), ["day", "year", ])
     month = months[dateMatch.group("month")]
     dateText = compFormat("{year:04}-{month:02}-{day:02}", day=day, month=month, year=year)
-    
-    return scrape_table(table, builder=builder, force_date=dateText)
+
+    if table is None:
+        today = datetime.date.today()
+        now = datetime.datetime.now()
+        if dateText == today.strftime("%Y-%m-%d"):
+            today_start = datetime.datetime.combine(today, datetime.time(0, 0, 0, 0))
+            daily_plan_before = today_start + datetime.timedelta(hours=1, minutes=1)
+            if now >= daily_plan_before:
+                builder.setDayClosed(dateText)
+        return None
+    else:
+        return scrape_table(table, builder=builder, force_date=dateText)
 
 def scrape_week(url, builder=None):
     content = str(getContents(url))
